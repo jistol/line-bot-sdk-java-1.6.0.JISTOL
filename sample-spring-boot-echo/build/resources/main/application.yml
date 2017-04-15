@@ -1,0 +1,12 @@
+server.use-forward-headers: true
+server:
+  port: 7777
+
+line:
+  handler.path: /line
+  bot :
+    - channel-token: KW+qBCA9y/dJO67rMtTRTwhzmEI9+mtykem0zqGsYy9LMD8Yns+ypcxvBsILS7bsAdetWEsRfqByN0aEPnHXklBNIrDRJrKyHFTF5/6SVFqp4bmPi3+XqtDi8qjCPIPLu5auX0xqTuGWhQ5S/PExFgdB04t89/1O/w1cDnyilFU=
+      channel-secret: ac85c631a5728860764a6d7aa8296b2c
+    - channel-token: YTaqqBaDNuOokGwDrK61cx6wNkmXWAklX5tWze3i2XtKjHqfDOUAa9x1nb7Z8yzyNmGntx/bGC/tcs0/6FqAo46UnJEG31WISz3NuZSFh5IhtbehvnUOK/ijHlpjEAnE83f+eV4ZDOOu5xWCaMVw8QdB04t89/1O/w1cDnyilFU=
+      channel-secret: 72b228bcc5b7a54363a2d80ca428538f
+
