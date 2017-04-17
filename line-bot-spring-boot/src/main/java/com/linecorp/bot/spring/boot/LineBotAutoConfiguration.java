@@ -16,9 +16,9 @@
 
 package com.linecorp.bot.spring.boot;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
+import com.linecorp.bot.client.*;
 import com.linecorp.bot.spring.boot.custom.LineMessagingClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -28,15 +28,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-import com.linecorp.bot.client.LineMessagingClient;
-import com.linecorp.bot.client.LineMessagingClientImpl;
-import com.linecorp.bot.client.LineMessagingService;
-import com.linecorp.bot.client.LineMessagingServiceBuilder;
-import com.linecorp.bot.client.LineSignatureValidator;
 import com.linecorp.bot.servlet.LineBotCallbackRequestParser;
 import com.linecorp.bot.spring.boot.interceptor.LineBotServerInterceptor;
 import com.linecorp.bot.spring.boot.support.LineBotServerArgumentProcessor;
 import com.linecorp.bot.spring.boot.support.LineMessageHandlerSupport;
+import org.springframework.util.StringUtils;
 
 @Configuration
 @AutoConfigureAfter(LineBotWebMvcConfigurer.class)
@@ -47,10 +43,16 @@ public class LineBotAutoConfiguration {
     private LineBotProperties lineBotProperties;
 
     @Bean
+    public LineMessagingClient lineMessagingClient(final LineMessagingClientFactory lineMessagingClientFactory) {
+        return lineMessagingClientFactory.get(lineBotProperties.getChannelSecret());
+    }
+
+    @Bean
     public LineMessagingClientFactory lineMessagingClientFactory()
     {
         return new LineMessagingClientFactory(
-            lineBotProperties.getBot().stream()
+            lineBotProperties.getAllBotList().stream()
+                    .filter(bot -> !StringUtils.isEmpty(bot.getChannelSecret()))
                     .reduce(new HashMap<String, LineMessagingClient>(), (map, bot) -> {
                         map.put(bot.getChannelSecret(),
                                 new LineMessagingClientImpl(LineMessagingServiceBuilder
@@ -83,7 +85,9 @@ public class LineBotAutoConfiguration {
     @Bean
     @ConditionalOnWebApplication
     public LineSignatureValidator lineSignatureValidator() {
-        return new LineSignatureValidator(lineBotProperties.getBot().stream().map(bot -> bot.getChannelSecret()));
+        return new LineSignatureValidator(lineBotProperties.getAllBotList().stream()
+                .filter(bot -> !StringUtils.isEmpty(bot.getChannelSecret()))
+                .map(bot -> bot.getChannelSecret()));
     }
 
     @Bean

@@ -16,6 +16,7 @@
 
 package com.example.bot.spring.echo;
 
+import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.spring.boot.custom.LineMessagingClientFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,15 +36,25 @@ public class EchoApplication {
     @Autowired
     private LineMessagingClientFactory lineMessagingClientFactory;
 
+    @Autowired
+    private LineMessagingClient lineMessagingClient;
+
     public static void main(String[] args) {
         SpringApplication.run(EchoApplication.class, args);
     }
 
-    @EventMapping
-    public void handleTextMessageEvent(MessageEvent<TextMessageContent> event, String secretKey) {
+    @EventMapping(priority = 1, secretKey = "72b228bcc5b7a54363a2d80ca428538f")
+    public void handleTextMessageEvent1(MessageEvent<TextMessageContent> event, String secretKey) {
         System.out.println("event: " + event);
         System.out.println("secretKey: " + secretKey);
         lineMessagingClientFactory.get(secretKey).pushMessage(new PushMessage(event.getSource().getUserId(), new TextMessage("test")));
+    }
+
+    @EventMapping(priority = 1, secretKey = "ac85c631a5728860764a6d7aa8296b2c")
+    public void handleTextMessageEvent2(MessageEvent<TextMessageContent> event) {
+        System.out.println("event: " + event);
+        System.out.println("secretKey: " + this.getClass().getEnclosingMethod().getAnnotation(EventMapping.class).secretKey());
+        lineMessagingClient.pushMessage(new PushMessage(event.getSource().getUserId(), new TextMessage("test")));
     }
 
     @EventMapping

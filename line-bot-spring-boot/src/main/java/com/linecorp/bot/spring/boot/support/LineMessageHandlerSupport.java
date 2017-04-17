@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -129,16 +130,16 @@ public class LineMessageHandlerSupport {
             return null;
         }
 
-        Preconditions.checkState(method.getParameterCount() == 2,
-                                 "Number of parameter should be 1. But {}",
+        Preconditions.checkState(method.getParameterCount() == 2 || method.getParameterCount() == 1,
+                                 "Number of parameter should be 1 or 2. But {}",
                                  (Object[]) method.getParameterTypes());
         // TODO: Support more than 1 argument. Like MVC's argument resolver?
 
         final Type type = method.getGenericParameterTypes()[0];
 
-        final Predicate<Event> predicate = new EventPredicate(type);
+        final BiPredicate<Event, String> predicate = new EventPredicate(type, mapping.secretKey());
         return new HandlerMethod(predicate, consumer, method,
-                                 getPriority(mapping, type));
+                                 getPriority(mapping, type), method.getParameterCount());
     }
 
     private int getPriority(final EventMapping mapping, final Type type) {
@@ -165,13 +166,14 @@ public class LineMessageHandlerSupport {
 
     @Value
     static class HandlerMethod {
-        Predicate<Event> supportType;
+        BiPredicate<Event, String> supportType;
         Object object;
         Method handler;
         int priority;
+        int parameterCount;
     }
 
-    @PostMapping("${line.handler.path:/callback}")
+    @PostMapping("${line.bot.handler.path:/callback}")
     public void callback(HttpServletRequest req, @LineBotMessages List<Event> events) {
         events.forEach(event -> dispatch(event, (String)req.getAttribute(LineBotServerArgumentProcessor.SECRET_KEY)));
     }
@@ -191,10 +193,10 @@ public class LineMessageHandlerSupport {
     private void dispatchInternal(final Event event, final String secretKey) throws Exception {
         final HandlerMethod handlerMethod = eventConsumerList
                 .stream()
-                .filter(consumer -> consumer.getSupportType().test(event))
+                .filter(consumer -> consumer.getSupportType().test(event, secretKey))
                 .findFirst()
                 .orElseThrow(() -> new UnsupportedOperationException("Unsupported event type. " + event));
-        final Object returnValue = handlerMethod.getHandler().invoke(handlerMethod.getObject(), event, secretKey);
+        final Object returnValue = handlerMethod.getHandler().invoke(handlerMethod.getObject(), handlerMethod.getParameterCount() == 1 ? new Object[]{ event } : new Object[]{ event, secretKey });
 
         handleReturnValue(event, secretKey, returnValue);
     }
@@ -206,12 +208,14 @@ public class LineMessageHandlerSupport {
         }
     }
 
-    private static class EventPredicate implements Predicate<Event> {
+    private static class EventPredicate implements BiPredicate<Event, String> {
         private final Class<?> supportEvent;
         private final Class<? extends MessageContent> messageContentType;
+        private final String secretKey;
 
         @SuppressWarnings("unchecked")
-        EventPredicate(final Type mapping) {
+        EventPredicate(final Type mapping, final String secretKey) {
+            this.secretKey = secretKey;
             if (mapping == ReplyEvent.class) {
                 supportEvent = ReplyEvent.class;
                 messageContentType = null;
@@ -231,15 +235,15 @@ public class LineMessageHandlerSupport {
         }
 
         @Override
-        public boolean test(final Event event) {
+        public boolean test(final Event event, final String secretKey) {
             return supportEvent.isAssignableFrom(event.getClass())
                    && (messageContentType == null ||
                        event instanceof MessageEvent &&
-                       filterByType(messageContentType, ((MessageEvent<?>) event).getMessage()));
+                       filterByType(messageContentType, ((MessageEvent<?>) event).getMessage()))
+                   && ("".equals(this.secretKey) || this.secretKey.equals(secretKey));
         }
 
         private static boolean filterByType(final Class<?> clazz, final Object content) {
-
             return clazz.isAssignableFrom(content.getClass());
         }
 

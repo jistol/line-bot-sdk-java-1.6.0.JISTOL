@@ -16,7 +16,6 @@
 
 package com.linecorp.bot.spring.boot;
 
-import com.linecorp.bot.client.LineMessagingServiceBuilder;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import lombok.Data;
@@ -31,55 +30,18 @@ import java.util.List;
 
 @Data
 @Validated
-@ConfigurationProperties(prefix = "line")
-public class LineBotProperties
+@ConfigurationProperties(prefix = "line.bot")
+public class LineBotProperties extends BotInfo
 {
-    private List<Bot> bot = new ArrayList<>();
+    private List<BotInfo> list = new ArrayList<>();
 
-    @Data
-    public static class Bot
+    public List<BotInfo> getAllBotList()
     {
-         /**
-         * Channel acccess token.
-         */
-        @Valid
-        @NotNull
-        private String channelToken;
-
-        /**
-         * Channel secret
-         */
-        @Valid
-        @NotNull
-        private String channelSecret;
-
-        @Valid
-        @NotNull
-        private String apiEndPoint = LineMessagingServiceBuilder.DEFAULT_API_END_POINT;
-
-        /**
-         * Connection timeout in milliseconds
-         */
-        @Valid
-        @NotNull
-        private long connectTimeout = LineMessagingServiceBuilder.DEFAULT_CONNECT_TIMEOUT;
-
-        /**
-         * Read timeout in milliseconds
-         */
-        @Valid
-        @NotNull
-        private long readTimeout = LineMessagingServiceBuilder.DEFAULT_READ_TIMEOUT;
-
-        /**
-         * Write timeout in milliseconds
-         */
-        @Valid
-        @NotNull
-        private long writeTimeout = LineMessagingServiceBuilder.DEFAULT_WRITE_TIMEOUT;
-
+        List<BotInfo> cloneList = new ArrayList<>();
+        cloneList.add(this);
+        cloneList.addAll(list);
+        return cloneList;
     }
-
 
     /**
      * Configuration for {@link LineMessageHandler} and {@link EventMapping}.
